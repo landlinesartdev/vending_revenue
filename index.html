@@ -94,16 +94,22 @@
             }
 
             document.getElementById("main").appendChild(table_container);
-        }        
+        }
+        
+        function handleUpdate(e) {
+            build(e.currentTarget.value)
+        }
 
         window.addEventListener('load', function () {
             build();
-            build("KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton");
         });
 
     </script>
 </head>
 <body>
+<label for="fa2">FA2 Address:</label>
+<input style="width:300px" type="text" id="fa2" value="KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton" />
+<button onClick="build(document.getElementById('fa2').value)">Get FA2 Revenue</button>
 <div id="main"></div>
 </body>
 </html>
