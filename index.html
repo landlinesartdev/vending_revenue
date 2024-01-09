@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        table {
+            font-family: arial, sans-serif;
+            border-collapse: collapse;
+            width: 100%;
+            font-size: 16px;
+        }
+
+        td, th {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 4px;
+        }
+    </style>
+    <script>
+
+        const relative_date = (d, month_delta) => {
+            const date = new Date(d);
+            date.setMonth(date.getMonth() + month_delta);
+            return date;
+        }
+
+        const zeroPad = (num, places) => String(num).padStart(places, '0')
+
+        async function get_price_total(sy, sm, ey, em) {
+            var royalty_contract = "KT1C666PqRacm8Ppu5RjxQa3ktkBxAVzLM8f"
+            var url = "https://api.mainnet.tzkt.io/v1/operations/transactions?target=" + royalty_contract + "&select=amount&limit=10000&status=applied&timestamp.gt=" + zeroPad(sy,2) + "-" + zeroPad(sm,2) + "-01T00:00:00Z&timestamp.lt=" + zeroPad(ey,2) + "-" + zeroPad(em,2) + "-01T00:00:00Z"
+            const response = await fetch(url);
+            const data = await response.json();
+            return Math.floor((data.reduce((a, b) => a + b, 0)) / 1000000);
+        }
+
+        async function get_fa2_total(fa2, sy, sm, ey, em) {
+            var vending_contract = "KT1RHEVmFy8ZB5vqq7u8NYswpP9eXwJKmU34";
+            var url = "https://api.tzkt.io/v1/tokens/transfers?token.contract=" + fa2 + "&to=" + vending_contract + "&limit=10000&select=amount&status=applied&timestamp.gt=" + zeroPad(sy,2) + "-" + zeroPad(sm,2) + "-01T00:00:00Z&timestamp.lt=" + zeroPad(ey,2) + "-" + zeroPad(em,2) + "-01T00:00:00Z"
+            const response = await fetch(url);
+            const data = await response.json();
+            return (data.reduce((a, b) => parseInt(a) + parseInt(b), 0));
+        }
+
+        async function get_contract_alias(address) {
+            if (address === undefined) {
+                return address;
+            }
+            var url = "https://api.tzkt.io/v1/accounts/" + address + "/metadata"
+            const response = await fetch(url);
+            const data = await response.json();
+            return data.alias === undefined ? address : data.alias;
+        }
+
+        async function build(fa2) {
+            const date = new Date();
+
+            const alias = await get_contract_alias(fa2);
+
+            const table_container = document.createElement("div");
+            const title = document.createElement("h2");
+            title.innerHTML = (fa2 === undefined) ? "XTZ REVENUE" : alias + " REVENUE";
+            const table = document.createElement("table");
+            table_container.appendChild(title);
+            table_container.appendChild(table);
+            const header = document.createElement("tr");
+            const month_header = document.createElement("th");
+            const amount_header = document.createElement("th");
+            month_header.innerHTML = "Month";
+            amount_header.innerHTML = "Revenue";
+            header.appendChild(month_header);
+            header.appendChild(amount_header);
+            table.appendChild(header);
+
+            for (var i=0; i<12; i++) {
+                const s = relative_date(date, -i);
+                const e = relative_date(date, -i+1);
+                const inputs = [s.getFullYear(), s.getMonth() + 1, e.getFullYear(), e.getMonth() + 1]
+                var revenue = 0;
+                if (fa2 !== undefined) {
+                    revenue = await get_fa2_total(fa2, ...inputs);
+                }
+                else {
+                    revenue = await get_price_total(...inputs); 
+                }
+
+                const row = document.createElement("tr");
+                const month = document.createElement("td");
+                const amount = document.createElement("td");
+                month.innerHTML = s.getFullYear() + "-" + zeroPad(s.getMonth() + 1, 2);
+                amount.innerHTML = revenue;
+                row.appendChild(month);
+                row.appendChild(amount);
+                table.appendChild(row);
+            }
+
+            document.getElementById("main").appendChild(table_container);
+        }        
+
+        window.addEventListener('load', function () {
+            build();
+            build("KT1RJ6PbjHpwc3M5rw5s2Nbmefwbuwbdxton");
+        });
+
+    </script>
+</head>
+<body>
+<div id="main"></div>
+</body>
+</html>
