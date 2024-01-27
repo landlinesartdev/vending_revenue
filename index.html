@@ -17,6 +17,8 @@
     </style>
     <script>
 
+        
+
         const OLD_CONTRACT = "KT1RHEVmFy8ZB5vqq7u8NYswpP9eXwJKmU34";
         const CURRENT_CONTRACT = "KT1E4X3uUvv6rCnnZT5MhXAjbrSrU5Zwynwq";
 
@@ -40,12 +42,23 @@
             return Math.floor((data.reduce((a, b) => a + b, 0)) / 1000000);
         }
 
-        async function get_fa2_total(vending_contract, fa2, sy, sm, ey, em) {
+        async function get_fa2_total(royalty_contract, vending_contract, fa2, sy, sm, ey, em) {
             //var vending_contract = "KT1RHEVmFy8ZB5vqq7u8NYswpP9eXwJKmU34";
-            var url = "https://api.tzkt.io/v1/tokens/transfers?token.contract=" + fa2 + "&to=" + vending_contract + "&limit=10000&select=amount&status=applied&timestamp.gt=" + zeroPad(sy,2) + "-" + zeroPad(sm,2) + "-01T00:00:00Z&timestamp.lt=" + zeroPad(ey,2) + "-" + zeroPad(em,2) + "-01T00:00:00Z"
+            var url = "https://api.tzkt.io/v1/operations/transactions?target=" + fa2 + "&entrypoint=transfer&sender=" + vending_contract + "&parameter.[*].txs.[*].to_=" + royalty_contract + "&limit=10000&status=applied&timestamp.gt=" + zeroPad(sy,2) + "-" + zeroPad(sm,2) + "-01T00:00:00Z&timestamp.lt=" + zeroPad(ey,2) + "-" + zeroPad(em,2) + "-01T00:00:00Z";
+            //var url = "https://api.tzkt.io/v1/tokens/transfers?token.contract=" + fa2 + "&to=" + vending_contract + "&limit=10000&select=amount&status=applied&timestamp.gt=" + zeroPad(sy,2) + "-" + zeroPad(sm,2) + "-01T00:00:00Z&timestamp.lt=" + zeroPad(ey,2) + "-" + zeroPad(em,2) + "-01T00:00:00Z";
             const response = await fetch(url);
             const data = await response.json();
-            return (data.reduce((a, b) => parseInt(a) + parseInt(b), 0));
+            let amounts = [];
+            for (const tx of data) {
+                for (const item of tx.parameter.value) {
+                    for (const op of item.txs) {
+                        if (op.to_ === royalty_contract) {
+                            amounts.push(op.amount);
+                        }
+                    }
+                }
+            }
+            return (amounts.reduce((a, b) => parseInt(a) + parseInt(b), 0));
         }
 
         async function get_contract_alias(address) {
@@ -84,7 +97,7 @@
                 const inputs = [s.getFullYear(), s.getMonth() + 1, e.getFullYear(), e.getMonth() + 1]
                 var revenue = 0;
                 if (fa2 !== undefined) {
-                    revenue = await get_fa2_total(CURRENT_CONTRACT, fa2, ...inputs);
+                    revenue = await get_fa2_total(CURRENT_REVENUE, CURRENT_CONTRACT, fa2, ...inputs);
                 }
                 else {
                     revenue = await get_price_total(OLD_REVENUE, OLD_CONTRACT, ...inputs); 
